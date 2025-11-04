@@ -111,6 +111,44 @@ def analyze_discussion():
         print(f"Summary Preview: {discussion.final_summary[:150]}...")
 
 
+def discussion_with_files():
+    """Discussion with data files/directories."""
+    print("\n" + "=" * 80)
+    print("EXAMPLE 5: Discussion with Data Files")
+    print("=" * 80)
+    
+    # Create sample text files for demonstration
+    import tempfile
+    import os
+    
+    with tempfile.TemporaryDirectory() as tmpdir:
+        # Create sample files
+        file1 = os.path.join(tmpdir, "data1.txt")
+        file2 = os.path.join(tmpdir, "data2.txt")
+        
+        with open(file1, "w") as f:
+            f.write("Sample data about AI: Machine learning has revolutionized many industries.")
+        
+        with open(file2, "w") as f:
+            f.write("Economic trends: The tech sector has shown significant growth in recent years.")
+        
+        # Initialize roundtable with data files
+        rt = Roundtable(
+            max_rounds=2,
+            temperature=0.6,
+            data_files=[file1, file2]
+        )
+        
+        # Conduct discussion with file data
+        discussion = rt.discuss(
+            "What insights can you draw from the provided data?",
+            verbose=True
+        )
+        
+        print(f"\n✓ Discussion completed with {len(discussion.file_data)} files")
+        print(f"✓ File data was available to all {len(rt.participants)} participants")
+
+
 if __name__ == "__main__":
     print("Roundtable API Examples\n")
     
@@ -120,6 +158,7 @@ if __name__ == "__main__":
         export_example()
         custom_config_example()
         analyze_discussion()
+        discussion_with_files()
         
         print("\n" + "=" * 80)
         print("✓ All examples completed successfully!")

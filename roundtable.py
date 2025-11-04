@@ -6,6 +6,7 @@ Multiple AI models discuss a question in rounds, building on each other's ideas.
 
 from typing import List, Dict, Optional
 from dataclasses import dataclass, field
+from pathlib import Path
 from langchain.schema import HumanMessage, AIMessage, SystemMessage
 
 # Handle both package and standalone imports
@@ -30,6 +31,7 @@ class Discussion:
     question: str
     rounds: List[Dict] = field(default_factory=list)
     final_summary: Optional[str] = None
+    file_data: Optional[List[Dict]] = None
 
 
 class Roundtable:
@@ -46,6 +48,7 @@ class Roundtable:
         temperature: float = 0.7,
         moderator_enabled: bool = True,
         tools_enabled: bool = False,
+        data_files: Optional[List[str]] = None,
     ):
         """
         Initialize the roundtable.
@@ -55,11 +58,13 @@ class Roundtable:
             temperature: Temperature for participant models (creativity level)
             moderator_enabled: Whether to use a moderator to guide discussion
             tools_enabled: Whether to enable external knowledge tools
+            data_files: List of file paths or directory paths containing text files
         """
         self.max_rounds = max_rounds
         self.temperature = temperature
         self.moderator_enabled = moderator_enabled
         self.tools_enabled = tools_enabled
+        self.data_files = data_files or []
         
         # Initialize participants
         self.participants = self._initialize_participants()
@@ -108,6 +113,66 @@ class Roundtable:
         
         return participants
     
+    @staticmethod
+    def _load_text_file(file_path: Path) -> Optional[Dict]:
+        """
+        Load a single text file.
+        
+        Args:
+            file_path: Path to the text file
+            
+        Returns:
+            Dict with filename and content, or None if failed
+        """
+        try:
+            with open(file_path, 'r', encoding='utf-8') as f:
+                content = f.read()
+            return {
+                'filename': file_path.name,
+                'path': str(file_path),
+                'content': content,
+                'size': len(content)
+            }
+        except Exception as e:
+            print(f"⚠️ Failed to read {file_path}: {e}")
+            return None
+    
+    def _load_data_files(self) -> List[Dict]:
+        """
+        Load all text files from the provided file/directory paths.
+        
+        Returns:
+            List of dicts containing file information and content
+        """
+        file_data = []
+        
+        for path_str in self.data_files:
+            path = Path(path_str)
+            
+            if not path.exists():
+                print(f"⚠️ Path does not exist: {path}")
+                continue
+            
+            if path.is_file():
+                # Single file
+                data = self._load_text_file(path)
+                if data:
+                    file_data.append(data)
+            elif path.is_dir():
+                # Directory - load all text files
+                text_files = list(path.glob('**/*.txt')) + \
+                           list(path.glob('**/*.md')) + \
+                           list(path.glob('**/*.text')) + \
+                           list(path.glob('**/*.csv')) + \
+                           list(path.glob('**/*.json'))
+                
+                for file_path in text_files:
+                    data = self._load_text_file(file_path)
+                    if data:
+                        file_data.append(data)
+        
+        return file_data
+    
     def discuss(self, question: str, verbose: bool = True) -> Discussion:
         """
         Conduct a roundtable discussion on a question.
@@ -119,7 +184,17 @@ class Roundtable:
         Returns:
             Complete discussion with all rounds and summary
         """
-        discussion = Discussion(question=question)
+        # Load data files if provided
+        file_data = []
+        if self.data_files:
+            file_data = self._load_data_files()
+            if file_data and verbose:
+                total_size = sum(f['size'] for f in file_data)
+                print(f"📁 Loaded {len(file_data)} file(s) ({total_size:,} characters)")
+                for f in file_data:
+                    print(f"   • {f['filename']} ({f['size']:,} chars)")
+        
+        discussion = Discussion(question=question, file_data=file_data if file_data else None)
         
         if verbose:
             print(f"\n🎯 Question: {question}\n")
@@ -168,6 +243,7 @@ class Roundtable:
                 discussion.question,
                 round_num,
                 context,
+                file_data=discussion.file_data,
             )
             
             response = participant.llm.invoke(prompt)
@@ -220,6 +296,7 @@ class Roundtable:
         question: str,
         round_num: int,
         context: str,
+        file_data: Optional[List[Dict]] = None,
     ) -> List:
         """Create the prompt for a participant's contribution."""
         system_msg = (
@@ -235,15 +312,26 @@ class Roundtable:
                 tools_desc += f"- {tool.name}: {tool.description}\n"
             system_msg += tools_desc
         
+        # Add file data information if available
+        file_context = ""
+        if file_data:
+            file_context = "\n\n📁 AVAILABLE DATA FILES:\n"
+            file_context += "You have access to the following files for reference:\n\n"
+            for f in file_data:
+                file_context += f"--- FILE: {f['filename']} ---\n"
+                file_context += f"{f['content']}\n\n"
+        
         if round_num == 1:
             user_msg = (
-                f"We're discussing: {question}\n\n"
+                f"We're discussing: {question}\n"
+                f"{file_context}\n"
                 f"This is Round {round_num}. Please share your initial thoughts and insights. "
                 f"Be specific, insightful, and concise (2-4 sentences)."
             )
         else:
             user_msg = (
-                f"We're discussing: {question}\n\n"
+                f"We're discussing: {question}\n"
+                f"{file_context}\n"
                 f"This is Round {round_num}. Here's what others have said:\n"
                 f"{context}\n\n"
                 f"Please respond by:\n"

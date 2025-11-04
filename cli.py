@@ -27,10 +27,11 @@ def cli():
 @click.option("--temperature", "-t", default=0.7, type=float, help="Temperature for creativity (0.0-1.0, default: 0.7)")
 @click.option("--no-moderator", is_flag=True, help="Disable moderator summary")
 @click.option("--tools", "-T", is_flag=True, help="Enable external knowledge tools (web, Wikipedia, arXiv)")
+@click.option("--data", "-d", multiple=True, type=click.Path(exists=True), help="File or directory containing text files for agents to reference (can be used multiple times)")
 @click.option("--quiet", "-q", is_flag=True, help="Minimal output (no progress)")
 @click.option("--export", "-e", type=click.Choice(["markdown", "json", "text"]), help="Export format")
 @click.option("--output", "-o", type=click.Path(), help="Output file path")
-def discuss(question, rounds, temperature, no_moderator, tools, quiet, export, output):
+def discuss(question, rounds, temperature, no_moderator, tools, data, quiet, export, output):
     """
     Conduct a roundtable discussion on a QUESTION.
     
@@ -43,6 +44,8 @@ def discuss(question, rounds, temperature, no_moderator, tools, quiet, export, o
         roundtable discuss "What makes a great leader?" --export markdown -o discussion.md
         
         roundtable discuss "Latest developments in quantum computing?" --tools
+        
+        roundtable discuss "Analyze this data" --data ./data_dir --data ./file.txt
     """
     try:
         from .roundtable import Roundtable
@@ -56,16 +59,21 @@ def discuss(question, rounds, temperature, no_moderator, tools, quiet, export, o
             temperature=temperature,
             moderator_enabled=not no_moderator,
             tools_enabled=tools,
+            data_files=list(data) if data else None,
         )
         
         if not quiet:
-            console.print(Panel(
+            info_text = (
                 f"[bold cyan]Roundtable Discussion[/bold cyan]\n"
                 f"Rounds: {rounds} | Temperature: {temperature} | "
-                f"Participants: {len(roundtable.participants)}" +
-                (f" | Tools: ENABLED ✅" if tools and roundtable.tools else ""),
-                box=box.ROUNDED,
-            ))
+                f"Participants: {len(roundtable.participants)}"
+            )
+            if tools and roundtable.tools:
+                info_text += " | Tools: ENABLED ✅"
+            if data:
+                info_text += f" | Data Files: {len(data)} path(s) 📁"
+            
+            console.print(Panel(info_text, box=box.ROUNDED))
         
         # Conduct discussion
         discussion = roundtable.discuss(question, verbose=not quiet)

@@ -48,6 +48,7 @@ Roundtable is a LangChain-powered multi-agent discussion system that orchestrate
 - 🔄 **Round-Based Brainstorming**: Ideas evolve and build across multiple discussion rounds
 - 🎙️ **Optional Moderator**: Intelligent AI moderator synthesizes final summaries and key insights
 - 🌐 **Universal API Support**: Works with any OpenAI-compatible API endpoint
+- 📁 **Data Files Support**: Pass text files or directories for agents to analyze and discuss
 - 📊 **Export Options**: Save discussions in Markdown, JSON, or plain text formats
 - 🎨 **Rich CLI Interface**: Beautiful, colorful terminal interface powered by `rich`
 - 🔧 **External Knowledge Tools**: Integrated web search (Tavily), Wikipedia, and arXiv for research-driven discussions
@@ -123,6 +124,16 @@ python run.py discuss "Latest developments in quantum computing?" --tools
 python run.py tools-status
 ```
 
+### 4. Discussions with Data Files
+
+```bash
+# Provide text files or directories for agents to analyze
+python run.py discuss "What insights can you draw from this data?" --data ./data_dir
+
+# Multiple files or directories
+python run.py discuss "Analyze these documents" --data ./file1.txt --data ./file2.txt --data ./reports_dir
+```
+
 ---
 
 ## ⚙️ Configuration
@@ -178,6 +189,63 @@ TAVILY_API_KEY=your-tavily-api-key  # For web search
 - **Mix Providers**: Combine OpenAI, Anthropic, local models, etc.
 - **Moderator**: Optional but recommended for complex discussions
 - **Tools**: Optional - adds research capabilities
+
+---
+
+## 📁 Data Files Feature
+
+Roundtable can load text files or directories and make them available to all agents during discussions.
+
+### Supported File Types
+- `.txt` - Plain text files
+- `.md` - Markdown files
+- `.csv` - CSV data files
+- `.json` - JSON data files
+- `.text` - Text files with .text extension
+
+### How It Works
+
+1. **Single File**: Pass a single text file to the discussion
+   ```bash
+   python run.py discuss "Summarize this document" --data ./report.txt
+   ```
+
+2. **Multiple Files**: Pass multiple files
+   ```bash
+   python run.py discuss "Compare these reports" --data ./report1.txt --data ./report2.md
+   ```
+
+3. **Directory**: Pass a directory and all supported text files will be loaded recursively
+   ```bash
+   python run.py discuss "What patterns do you see?" --data ./data_directory
+   ```
+
+4. **Mixed**: Combine files and directories
+   ```bash
+   python run.py discuss "Analyze all this data" --data ./file.txt --data ./folder
+   ```
+
+### Python API Usage
+
+```python
+from roundtable import Roundtable
+
+# Initialize with data files
+rt = Roundtable(
+    max_rounds=3,
+    data_files=['./data1.txt', './data_dir', './report.md']
+)
+
+# Agents will have access to all file contents
+discussion = rt.discuss("What insights can you find in this data?")
+```
+
+### Benefits
+- ✅ All agents see the same data
+- ✅ Filenames and full content are provided
+- ✅ Works with any text-based format
+- ✅ Supports both individual files and entire directories
+- ✅ Automatically handles file reading and formatting
 
 ---
 
@@ -241,8 +309,11 @@ python run.py discuss "Creative problem-solving?" --temperature 0.9
 # Export to file
 python run.py discuss "What makes great leadership?" --export markdown -o discussion.md
 
+# With data files
+python run.py discuss "Analyze this data" --data ./data.txt --data ./reports_dir
+
 # With all options
-python run.py discuss "AI ethics?" --rounds 5 --tools --export markdown -o output.md
+python run.py discuss "AI ethics?" --rounds 5 --tools --data ./research --export markdown -o output.md
 
 # Quiet mode (minimal output)
 python run.py discuss "Topic" --quiet --export json -o output.json
@@ -379,6 +450,15 @@ python run.py discuss "Implications of AGI development?" --tools --rounds 5
 python run.py discuss "Best strategy for scaling our business?" --tools
 ```
 
+### Data Analysis
+```bash
+# Analyze text data, reports, or documents
+python run.py discuss "What patterns exist in this data?" --data ./data_dir --rounds 4
+
+# Compare multiple documents
+python run.py discuss "How do these reports differ?" --data ./report1.txt --data ./report2.txt
+```
+
 ### Brainstorming
 ```bash
 # Generate ideas through collaborative discussion
@@ -422,6 +502,27 @@ discussion = rt.discuss("Your question here")
 markdown = rt.export_discussion(discussion, format="markdown")
 with open("output.md", "w") as f:
     f.write(markdown)
+```
+
+### With Data Files
+
+```python
+from roundtable import Roundtable
+
+# Initialize with data files
+rt = Roundtable(
+    max_rounds=3,
+    temperature=0.7,
+    data_files=['./data.txt', './reports_dir', './analysis.md']
+)
+
+# Conduct discussion - agents will have access to all file contents
+discussion = rt.discuss("What insights can you find in the provided data?")
+
+# Access file information
+print(f"Files loaded: {len(discussion.file_data)}")
+for file in discussion.file_data:
+    print(f"  - {file['filename']} ({file['size']} chars)")
 ```
 
 ### Custom Participant Configuration
@@ -624,7 +725,7 @@ If you find Roundtable useful, please consider giving it a star on GitHub! ⭐
 
 <div align="center">
 
-**Made with ❤️ by the Roundtable Team**
+**Made with ❤️**
 
 [⬆ Back to Top](#-roundtable-multi-agent-ai-brainstorming-system)
 

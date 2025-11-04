@@ -65,9 +65,37 @@ python run.py discuss "What makes great leadership?" --export markdown -o discus
 # Adjust creativity
 python run.py discuss "Creative writing tips?" --temperature 0.9
 
+# With data files (analyze text files)
+python run.py discuss "What insights do you see?" --data ./my_data.txt
+
+# With a directory of files
+python run.py discuss "Analyze all these reports" --data ./reports_directory
+
 # Check configuration
 python run.py info
 ```
+
+## 5. Using Data Files
+
+Roundtable can analyze text files and directories:
+
+```bash
+# Create a sample text file
+echo "AI is transforming industries worldwide." > sample.txt
+
+# Discuss with the file
+python run.py discuss "Summarize the key points" --data sample.txt
+
+# Multiple files
+python run.py discuss "Compare these documents" --data file1.txt --data file2.txt
+
+# Entire directory
+python run.py discuss "What patterns exist?" --data ./data_folder
+```
+
+**Supported file types:** `.txt`, `.md`, `.csv`, `.json`, `.text`
+
+All agents will have access to both filenames and full content of the files.
 
 ## Example Output
 
